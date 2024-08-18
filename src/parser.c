@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   parser.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mapichec <mapichec@student.42.fr>          +#+  +:+       +#+        */
+/*   By: marco <marco@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 14:04:42 by adapassa          #+#    #+#             */
-/*   Updated: 2024/08/09 20:16:12 by mapichec         ###   ########.fr       */
+/*   Updated: 2024/08/18 21:23:30 by marco            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,8 +62,8 @@ int	manual_cmd(char **cmd_args, t_data **data)
 	i = 0;
 	tmp->cmd = conf_man_cmd(cmd_args[0]);
 	if (tmp->cmd == CH_DIR)
-		return (1);
-		// return (cd_cmd(cmd_args, data));
+		return (cd_cmd(cmd_args, data));
+		// return (1);
 	if (tmp->cmd == ECHO)
 		return (1);
 		// return (echo_cmd(cmd_args));
@@ -74,7 +74,7 @@ int	manual_cmd(char **cmd_args, t_data **data)
 		return (1);
 		// return (unset_cmd(cmd_args));
 	if (tmp->cmd == ENV)
-		return (1);
+		return (env_cmd(data));
 		// return (env_cmd(cmd_args));
 	if (tmp->cmd == EXIT)
 		return (1);
@@ -99,11 +99,9 @@ static int child_process(char *cmd, char **cmd_args, t_data *data, char **envp)
 	}
 	ft_printf("proceding to execve: \n");
 	if (manual_cmd(cmd_args, &data))
-	{
 		ft_printf("\033[0;93mfound command for manual asset\033[0;39m\n");
-		exit(0);
-	}
-	execve(cmd, cmd_args, envp);
+	else
+		execve(cmd, cmd_args, envp);
 	return (EXIT_SUCCESS);
 }
 
@@ -114,27 +112,30 @@ static int parent_process(char *cmd, char **cmd_args, t_data *data, char **envp)
 	return (status);
 }
 
+/*
+/ * TODO: the child and the parent process are passing from the same 
+/ * 		execution of the commands so the command get executed two times
+*/
 
 static void	execute_command(char **command, t_data *data, char **envp)
 {
 	char *cmd;
-	char **cmd_args;
-	char *tmp;
-	int	 end[2];
+	// char **cmd_args;
+	// char *tmp;
 	pid_t parent;
 	int status;
 
 	cmd = NULL;
 	cmd = find_cmd(command[0], data);
-	tmp = ft_strjoin_gnl(command[0], " ");
-	int i = 1;
-	while (command[i])
-	{
-		//ft_printf("%s\n", command[i]);
-		tmp = ft_strjoin_gnl(tmp, command[i]);
-		i++;
-	}
-	cmd_args = ft_split(tmp, 32);
+	// tmp = ft_strjoin_gnl(command[0], " ");
+	// int i = 1;
+	// while (command[i] && command[i][0])
+	// {
+	// 	ft_printf("%s\n", command[i]);
+	// 	tmp = ft_strjoin_gnl(tmp, command[i]);
+	// 	i++;
+	// }
+	// cmd_args = ft_split(tmp, 32);
 	// Debug
 	//printf("%s\n", cmd);
 	//printf("%s\n", cmd_args[0]);
@@ -144,9 +145,9 @@ static void	execute_command(char **command, t_data *data, char **envp)
 		exit(ft_printf("error with the fork"));
 	//ft_printf("%d\n", status);
 	if (!parent)
-		child_process(cmd, cmd_args, data, envp);
+		child_process(cmd, command, data, envp);
 	else
-		status = parent_process(cmd, cmd_args, data, envp);
+		status = parent_process(cmd, command, data, envp);
 	//ft_printf("%d\n", status);
 	//exit(1);
 	return ;

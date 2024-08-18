@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: mapichec <mapichec@student.42.fr>          +#+  +:+       +#+        */
+/*   By: marco <marco@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/08/09 18:04:31 by mapichec         ###   ########.fr       */
+/*   Updated: 2024/08/18 21:03:29 by marco            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,7 @@ static	char	*retrieve_line(char **envp)
 
 static void	env_parser(t_data *data, char **envp)
 {
+	data->env_var = envp;
 	data->my_line = retrieve_line(envp);
 	if (!data->my_line)
 		exit(write(1, "PATH not found\n", 15));

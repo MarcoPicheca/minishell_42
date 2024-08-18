@@ -3,6 +3,7 @@
 
 # include <stdio.h>
 # include <stdlib.h>
+# include <errno.h>
 # include <ctype.h> 
 # include <readline/readline.h>
 # include "../libft/libft.h"
@@ -53,6 +54,7 @@ typedef struct s_data
 	/////////////
 	// From Pipex
 	char *my_line;
+	char **env_var;
 	char *path_from_envp;
 	char **my_paths;
 }	t_data;
@@ -78,5 +80,9 @@ void		token_parser(t_token **tokens,t_data *data, char **envp);
 char		*expand_variable(t_token **current, char **envp);
 void		*token_reformatting(t_token **tokens);
 //void		token_parser(t_token **tokens, t_data *data);
+
+//// built_in ////
+int			cd_cmd(char **cmd_args, t_data **data);
+int			env_cmd(t_data **data);
 
 #endif
