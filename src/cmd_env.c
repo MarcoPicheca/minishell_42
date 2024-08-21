@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   cmd_env.c                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: marco <marco@student.42.fr>                +#+  +:+       +#+        */
+/*   By: mapichec <mapichec@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/08/18 21:08:15 by marco             #+#    #+#             */
-/*   Updated: 2024/08/18 21:20:12 by marco            ###   ########.fr       */
+/*   Updated: 2024/08/21 16:27:42 by mapichec         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,7 +18,7 @@ int	env_cmd(t_data **data)
 	int	i;
 
 	i = 0;
-	ft_printf(" \033[0;92m-------- %d --------\n", getpid());
+	// ft_printf(" \033[0;92m-------- %d --------\n", getpid());
 	tmp = (*data);
 	while (tmp->env_var[i] != NULL)
 	{

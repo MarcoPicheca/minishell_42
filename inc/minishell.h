@@ -38,13 +38,15 @@ typedef enum cmd
 	EXPORT,
 	UNSET,
 	ENV,
-	EXIT
+	EXIT,
+	PWD
 }	t_cmd;
 
 typedef struct s_data
 {
 	char			*input;
 	int				fd;
+	pid_t			parent;
 	t_state			state;
 	t_cmd			cmd;
 	int				redirect_state;
@@ -84,5 +86,6 @@ void		*token_reformatting(t_token **tokens);
 //// built_in ////
 int			cd_cmd(char **cmd_args, t_data **data);
 int			env_cmd(t_data **data);
+int			pwd_cmd(t_data **data);
 
 #endif

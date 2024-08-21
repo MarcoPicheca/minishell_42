@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   cmd_chdir.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: marco <marco@student.42.fr>                +#+  +:+       +#+        */
+/*   By: mapichec <mapichec@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/08/18 16:29:32 by marco             #+#    #+#             */
-/*   Updated: 2024/08/18 19:44:18 by marco            ###   ########.fr       */
+/*   Updated: 2024/08/21 17:01:09 by mapichec         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,5 +32,5 @@ int cd_cmd(char **cmd_args, t_data **data)
 			return (close(fd),
 			ft_printf("bash: cd: %s: Not a directory\n", cmd_args[1]));
 	}
-	return(close(fd), ft_printf("chdir done\n"));
+	return(close(fd), 1);
 }

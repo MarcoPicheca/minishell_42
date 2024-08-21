@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   parser.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: marco <marco@student.42.fr>                +#+  +:+       +#+        */
+/*   By: mapichec <mapichec@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 14:04:42 by adapassa          #+#    #+#             */
-/*   Updated: 2024/08/18 21:23:30 by marco            ###   ########.fr       */
+/*   Updated: 2024/08/21 19:57:14 by mapichec         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,7 +37,7 @@ char	*find_cmd(char *cmd, t_data *data)
 
 int	conf_man_cmd(char *str)
 {
-	if (!ft_strncmp(str, "cd", ft_strlen(str)))
+	if (ft_strncmp(str, "cd", ft_strlen(str)) == 0)
 		return (1);
 	if (!ft_strncmp(str, "echo", ft_strlen(str)))
 		return (2);
@@ -45,10 +45,12 @@ int	conf_man_cmd(char *str)
 		return (3);
 	if (!ft_strncmp(str, "unset", ft_strlen(str)))
 		return (4);
-	if (!ft_strncmp(str, "env", ft_strlen(str)))
+	if (ft_strncmp(str, "env", ft_strlen(str)) == 0)
 		return (5);
 	if (!ft_strncmp(str, "exit", ft_strlen(str)))
 		return (6);
+	if (!ft_strncmp(str, "pwd", ft_strlen(str)))
+		return (7);
 	else
 		return (0);
 }
@@ -78,6 +80,8 @@ int	manual_cmd(char **cmd_args, t_data **data)
 		// return (env_cmd(cmd_args));
 	if (tmp->cmd == EXIT)
 		return (1);
+	if (tmp->cmd == PWD)
+		return (pwd_cmd(data));
 		// return (exit_cmd(cmd_args));
 	return (0);
 }
@@ -99,7 +103,7 @@ static int child_process(char *cmd, char **cmd_args, t_data *data, char **envp)
 	}
 	ft_printf("proceding to execve: \n");
 	if (manual_cmd(cmd_args, &data))
-		ft_printf("\033[0;93mfound command for manual asset\033[0;39m\n");
+		return (0);
 	else
 		execve(cmd, cmd_args, envp);
 	return (EXIT_SUCCESS);
@@ -109,24 +113,21 @@ static int parent_process(char *cmd, char **cmd_args, t_data *data, char **envp)
 {
 	int status;
 	waitpid(-1, &status, 0);
+	ft_printf("\033[0;92m %d getpid() --- %d pid.data\033[0;39m\n", getpid(), data->parent);
 	return (status);
 }
 
 /*
-/ * TODO: the child and the parent process are passing from the same 
-/ * 		execution of the commands so the command get executed two times
+/ *  
+/ * TODO: 
+/ * -	the child and the parent process are passing from the same 
+/ * 	execution of the commands so the command get executed two times
+/ * 
+/ * -	the export command id hell on earth
 */
 
-static void	execute_command(char **command, t_data *data, char **envp)
-{
-	char *cmd;
 	// char **cmd_args;
 	// char *tmp;
-	pid_t parent;
-	int status;
-
-	cmd = NULL;
-	cmd = find_cmd(command[0], data);
 	// tmp = ft_strjoin_gnl(command[0], " ");
 	// int i = 1;
 	// while (command[i] && command[i][0])
@@ -139,8 +140,17 @@ static void	execute_command(char **command, t_data *data, char **envp)
 	// Debug
 	//printf("%s\n", cmd);
 	//printf("%s\n", cmd_args[0]);
+static void	execute_command(char **command, t_data *data, char **envp)
+{
+	char *cmd;
+	pid_t parent;
+	int status;
+
+	cmd = NULL;
+	cmd = find_cmd(command[0], data);
+	data->parent = getpid();
 	parent = fork();
-	//ft_printf("%d\n", parent);
+	// ft_printf("%d\n", data->parent);
 	if (parent < 0)
 		exit(ft_printf("error with the fork"));
 	//ft_printf("%d\n", status);
@@ -149,7 +159,7 @@ static void	execute_command(char **command, t_data *data, char **envp)
 	else
 		status = parent_process(cmd, command, data, envp);
 	//ft_printf("%d\n", status);
-	//exit(1);
+	// exit(1);
 	return ;
 }
 
@@ -237,6 +247,7 @@ void	token_parser(t_token **tokens, t_data *data, char **envp)
 			// handle redirection before executing the command;
 			ft_printf("executing command: ----------------------->\n");
 			execute_command(command, data, envp);
+			// exit(1);
 			close(data->fd);
 			return ;
 			//current = current->next->next;
