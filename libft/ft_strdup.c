@@ -6,7 +6,7 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/12/20 19:30:25 by adapassa          #+#    #+#             */
-/*   Updated: 2024/07/08 09:54:38 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/09/13 18:03:38 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,7 +30,7 @@ char	*ft_strdup(const char *s)
 	int		l;
 
 	l = ft_strlen(s);
-	pt1 = malloc(sizeof(char) * (l + 1));
+	pt1 = ft_calloc(sizeof(char), (l + 1));
 	if (!pt1)
 		return (0);
 	ft_memcpy(pt1, s, l);

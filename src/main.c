@@ -3,137 +3,155 @@
 /*                                                        :::      ::::::::   */
 /*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: marco <marco@student.42.fr>                +#+  +:+       +#+        */
+/*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/08/18 21:03:29 by marco            ###   ########.fr       */
+/*   Updated: 2024/10/08 18:21:56 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../inc/minishell.h"
 
-static	char	*retrieve_line(char **envp)
+int	g_err_state;
+
+static void	add_tokens_to_list(t_token_list *result, t_token **src)
 {
-	int	i;
+	while ((*src)->type != TOKEN_PIPE && (*src)->type != TOKEN_EOF)
+	{
+		ft_tokenadd_back(&result->head,
+			ft_lstnewtoken((*src)->type, ft_strdup((*src)->value)));
+		*src = (*src)->next;
+	}
+}
+
+static void	split_tokens(t_data **data, t_token *src)
+{
+	t_token_list	*result;
+	t_token_list	*result_head;
+	int				i;
+	int				count;
 
 	i = 0;
-	while (envp[i] != NULL)
+	count = count_pipes(src) + 1;
+	result = (t_token_list *)ft_calloc(1, sizeof(t_token_list));
+	result_head = result;
+	while (i++ < count && src != NULL)
 	{
-		if (ft_strnstr(envp[i], "PATH=", 5))
-			return (ft_strdup(envp[i]));
-		i++;
+		add_tokens_to_list(result, &src);
+		if (src->type == TOKEN_PIPE)
+		{
+			src = src->next;
+			if (src != NULL)
+			{
+				result->next = (t_token_list *)ft_calloc(1,
+						sizeof(t_token_list));
+				result = result->next;
+			}
+		}
 	}
-	return (NULL);
+	result->next = NULL;
+	(*data)->token_list = result_head;
 }
 
-static void	env_parser(t_data *data, char **envp)
+static	int	read_input(t_data *data)
 {
-	data->env_var = envp;
-	data->my_line = retrieve_line(envp);
-	if (!data->my_line)
-		exit(write(1, "PATH not found\n", 15));
-	data->path_from_envp = ft_substr(data->my_line, 5, 500);
-	data->my_paths = ft_split(data->path_from_envp, ':');
-
-	/////////
-	// Debug
-	// printf("%s\n", data->path_from_envp);
-	// exit(0);
+	data->token_list = NULL;
+	data->tokens = NULL;
+	data->merdoso = 0;
+	data->input = readline("myprompt$ ");
+	if (!data->input)
+		return (0);
+	if (data->input[0] != '\0')
+		add_history(data->input);
+	return (1);
 }
 
-static int piper(t_token **tokens)
+void	do_pipe(t_data *data, t_token *tokens, char **envp)
 {
-	t_token *current = *tokens;
-	
-	while (current->type != TOKEN_EOF)
-	{
-		if (current->type == TOKEN_PIPE)
-			return (1);
-		current = current->next;
-	}
-	return (0);
+	t_token	*tmp;
+
+	tmp = copy_token_list(&data, tokens);
+	split_tokens(&data, tmp);
+	free_list(data->tmp);
+	free_list(tmp);
+	pipe_case(&tokens, &data, envp, &data->token_list);
 }
 
-
-// Function to count occurrences of '|' in linked list nodes
-static int countPipes(t_token* head)
+int	main(int argc, char **argv, char **envp)
 {
-    int count = 0;
-    t_token* current = head;
-    
-    while (current != NULL) {
-        if (current->type == TOKEN_PIPE) {
-            count++;
-        }
-        current = current->next;
-    }
-    
-    return count;
-}
-
-static int child_process_pipe(char *data, char **envp)
-{
-	int i = 0;
-	ft_printf("hello from %d\n iteration");
-	return (0);
-}
-
-static void pipe_case(t_token **tokens, t_data *data, char **envp)
-{
-	int pipes = countPipes(*tokens);
-	int end[pipes + 1];
-	char **commands;
-	int i = 0;
-
-	commands = ft_split(data->input, '|');
-	while (i < (pipes + 1))
-	{
-		child_process_pipe(commands[i++], envp);
-	}
-}
-
-int main(int argc, char **argv, char **envp)
-{
-	t_data		data;
+	t_data		*data;
 	t_token		*tokens;
+	int			flags;
 
+	if (init_data(&data, argc, argv, &tokens) > 0)
+		return (1);
+	flags = fcntl(STDIN_FILENO, F_GETFL, 0);
+	fcntl(STDIN_FILENO, F_SETFL, flags | O_NONBLOCK);
+	if (!envp)
+		return (1);
+	gen_list_env(&data, envp);
+	set_signal();
 	while (1)
 	{
-		data.input = NULL;
-		data.input = readline("myprompt$ ");
-		data.fd = -1;
-		//data.state = NORMAL;
-	
-		if (!data.input)
-			exit(1);
-		
-		tokens = tokenize_string(&data);
-		token_reformatting(&tokens);
-		env_parser(&data, envp);
-		if (piper(&tokens) == 0)
-			token_parser(&tokens, &data, envp);
-		else 
-		{
-			printf("found pipe case!\n");
-			//pipe_splitter(&data, &tokens);
-			pipe_case(&tokens, &data, envp);
-			exit(1);
-			// pipe_token_parser(&data);
-		}
-		token_parser(&tokens, &data, envp);
-		//exit(1);
-		printf("debug: -------------------------------->\n");
-		t_token	*head = tokens;
-		//Debug
-		while (tokens)
-		{
-			printf("%d : %s\n", tokens->type, tokens->value);
-			tokens = tokens->next;
-		}
-		// resets the list pointer to it's head
-		tokens = head;
-		// Free and exit program
-		free_exit(&data);
+		if (tokens)
+			free_tokens(&data, tokens);
+		if (!read_input(data))
+			return (ft_printf("exit\n"), free_exit(&data), 1);
+		if (data->input[0] == '\0' || tokenizer(&data, &tokens))
+			continue ;
+		// print_tokens(tokens);
+		if (env_parser(&data, envp) > 0)
+			;
+			// continue ;
+		command_init(data, tokens, envp);
 	}
-	return (0);
 }
+
+// Edge Cases:
+// diomerda | OK
+// = current_list->head; | OK
+// ljsdbhhds hdsdsh > | lhsdb<dshh !? (leaks)
+// t_token *result; = NULL; | OK
+// "/usr/bin/ls" | OK
+// "           "  (only as second command) | OK
+
+// Single Command:
+// echo ciao | OK
+// echo -nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn ciao OK
+// echo -n -n -n -n -n ciao OK
+// echo -n -n -nf -n ciao OK
+// echo "ciao" ciao | OK
+// ec"ho" ciao | KO
+// ls -l | OK
+// exit | OK
+// ls -l > outfile OK
+// cat outfile OK
+// < outfile grep -rl out OK
+// cat << eof | OK
+// a << s << z << x OK
+// ls -l >> out | OK
+// export a=32 b=78 c=4647 | OK
+// echo cioa$PWD ciao | OK
+
+// Multi Cmd:
+//
+// cat merda | cat ciao | OK
+// < outfile grep -rl ada | cat -e > out2 | OK
+// < src/init.c grep -rl int | cat -e > out2 | OK
+// cat src/main.c | cat src/init.c | OK
+// env | sort | grep -v SHLVL | grep -v ^_ | OK
+// < out env | sort | grep -v SHLVL | grep -v ^_ | OK
+// out < env | sort | grep -v SHLVL | grep -v ^_ | segfault
+
+// multi cmd still have issues when run as second command ?!
+// unset home e cd senza argomenti
+// cat << << eof
+
+// unset $PATH
+// program should not work
+// absolute command
+// env | sort | grep -v SHLVL | grep -v ^_
+
+// TODO : add lexical control to export 
+// TODO : add getcwd to make pwd work with unset || OK
+// TODO : comand env && builtins usage with >> & <<

@@ -1,12 +1,21 @@
 NAME = minishell
 CC = cc
-#CFLAGS = -Wall -Wextra -Werror -g
-CFLAGS = -g
+# CFLAGS = -Wall -Wextra -Werror -g
+CFLAGS = -g -lreadline -Wall -Wextra -Werror
 # Source files
 SRC_DIR = src
 LIB = ./libft/libft.a
-SRCS = main exit_handle tokenizer states redirection init \
-		utils parser cmd_chdir cmd_env cmd_pwd\
+SRCS = main init tokenizer/lexer exit_handle \
+		tokenizer/lexer_utils tokenizer/token_utils \
+		main_utils parser/parser parser/parser_utils \
+		executor/exec executor/exec_utils redirect/redirect \
+		expander env_list executor/pipe_case \
+		builtin/chdir builtin/builtin executor/pipe_utils \
+		builtin/exit builtin/echo builtin/export builtin/unset \
+		builtin/pwd builtin/env redirect/signal_heredoc redirect/expander_doc \
+		signals get_next_line get_next_line_utils \
+		builtin/utils_builtin executor/exec_utils2 builtin/export_utils \
+		helper_function executor/exec_utils3 \
 
 SRC = $(addprefix $(SRC_DIR)/, $(addsuffix .c, $(SRCS)))
 # Object file generation
@@ -25,17 +34,9 @@ MAGENTA = \033[0;95m
 GRAY = \033[0;90m
 WHITE = \033[0;97m
 
-BANNER = \
-"$(GREEN)\
-\n  __  __          _____ _          _ _ \n\
- |  \/  |        / ____| |        | | |\n\
- | \  / |___  __| (___ | |__   ___| | |\n\
- | |\/| / _ \/ _ \___ \| '_ \ / _ \ | |\n\
- | |  | |__/  /  ____| ) | | | |__/ | |\n\
- |_|  |_|\___|  |_____/|_| |_|\___|_|_|\n\
-$(DEFAULT)"
+#$(DEFAULT)
 
-all: banner lib $(OBJ_DIR) $(NAME)
+all: lib $(OBJ_DIR) $(NAME)
 
 lib:
 		make -sC libft
@@ -43,16 +44,17 @@ lib:
 $(OBJ_DIR):
 		mkdir -p $(OBJ_DIR)
 
-$(NAME): $(OBJ)
+$(NAME): $(SRC)
 		@echo "\033[32mCompiling $(NAME) 🚀"
-		$(CC) $(CFLAGS) $(OBJ) $(LIB) -lreadline -o $(NAME)
+		$(CC) $(CFLAGS) $(SRC) $(LIB) -lreadline -o $(NAME)
 		@echo "$(GREEN)$(NAME) compilata con successo❗️ 📁$(DEFAULT)"
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-		$(CC) $(CFLAGS) -c $< -o $@
+# $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+# 		@mkdir -p $(dir $@)
+# 		$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-		$(RM) $(OBJ)
+# $(RM) $(OBJ)
 		@echo "$(CIANO)file oggetto di $(NAME) rimossi con successo❗️ 🪦$(DEFAULT)"
 
 fclean: clean
@@ -63,6 +65,3 @@ fclean: clean
 		@echo "$(RED)$(NAME) rimossa con successo❗️ ❌$(DEFAULT)"
 
 re: fclean all
-
-banner:
-		@echo $(BANNER)

@@ -6,7 +6,7 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/03 20:28:03 by adapassa          #+#    #+#             */
-/*   Updated: 2024/01/03 20:36:51 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/08/30 06:41:44 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,6 +20,21 @@ int	ft_lstsize(t_list *lst)
 	while (lst)
 	{
 		lst = lst->next;
+		i++;
+	}
+	return (i);
+}
+
+int	ft_lstsize_token(t_token *lst)
+{
+	int		i;
+	t_token	*node;
+
+	node = lst;
+	i = 0;
+	while (node)
+	{
+		node = node->next;
 		i++;
 	}
 	return (i);

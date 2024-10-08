@@ -6,7 +6,7 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/01/03 20:34:42 by adapassa          #+#    #+#             */
-/*   Updated: 2024/07/08 09:28:07 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/08/28 17:56:44 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,7 +32,11 @@ t_token	*ft_lstnewtoken(t_token_type type, char *content)
 	nodo = (t_token *)malloc(sizeof(t_token));
 	if (!nodo)
 		return (0);
-	nodo->type = type;
+	nodo->state = STATE_NORMAL;
+	if (type == TOKEN_DOLLAR && content[1] == '\0')
+		nodo->type = 0;
+	else
+		nodo->type = type;
 	nodo->value = content;
 	nodo->next = 0;
 	return (nodo);

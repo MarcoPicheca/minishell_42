@@ -6,7 +6,7 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/12/19 17:27:20 by adapassa          #+#    #+#             */
-/*   Updated: 2024/07/17 16:40:23 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/09/24 16:46:57 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,7 +14,7 @@
 # define LIBFT_H
 
 # ifndef BUFFER_SIZE
-#  define BUFFER_SIZE 100
+#  define BUFFER_SIZE 10
 # endif
 
 # include <unistd.h>
@@ -26,15 +26,21 @@
 # include <stdbool.h>
 # include <stddef.h>
 # include <string.h>
+# include <limits.h>
+# include <errno.h>
+# include <ctype.h>
 //# include "../inc/minishell.h"
 
-typedef enum quote_states
+// single quotes inhibit the dollar double don't
+
+typedef enum state
 {
-	EXIT_CLOSE_DQUOTES,
-	EXIT_OPENED_DQUOTES,
-	EXIT_CLOSE_SQUOTES,
-	EXIT_OPEN_SQUOTES
-}	t_quote_state;
+	STATE_NORMAL,
+	STATE_DOLLAR,
+	STATE_SINGLE_QUOTES,
+	STATE_DOUBLE_QUOTES,
+	STATE_DOLLAR_DOUBLE_QUOTES
+}	t_token_state;
 
 typedef enum type
 {
@@ -51,7 +57,8 @@ typedef enum type
 	TOKEN_SINGLE_QUOTES,
 	TOKEN_WHITESPACE,
 	TOKEN_COMMAND,
-	TOKEN_APPENDICE
+	TOKEN_APPENDICE,
+	TOKEN_WORD_QT
 }	t_token_type;
 
 ////////////////////////////////////////////////
@@ -65,6 +72,7 @@ typedef struct s_token
 {
 	t_token_type	type;
 	char			*value;
+	t_token_state	state;
 	struct s_token	*next;
 }	t_token;
 
@@ -72,39 +80,43 @@ typedef struct s_token
 # define TRUE 1
 # define FALSE 0
 ////////////////////////////////////////////////
-int		ft_isalnum(char c);
-int		ft_isalpha(int c);
-int		ft_isascii(int c);
-int		ft_isdigit(int c);
-int		ft_isprint(int c);
-int		ft_strlen(const char *str);
+int			ft_isalnum(char c);
+int			ft_isalpha(int c);
+int			ft_isascii(int c);
+int			ft_isdigit(int c);
+int			ft_isprint(int c);
+int			ft_strlen(const char *str);
 ///////////////////////////////////////////////
-void	*ft_memset(void *str, int c, size_t n);
-void	ft_bzero(void *str, size_t n);
-void	*ft_memcpy(void *dest, const void *src, size_t n);
-void	*ft_memmove(void *dest, const void *src, size_t n);
-void	*ft_memchr(const void *s, int c, size_t n);
-int		ft_memcmp(const void *s1, const void *s2, size_t n);
+void		*ft_memset(void *str, int c, size_t n);
+void		ft_bzero(void *str, size_t n);
+void		*ft_memcpy(void *dest, const void *src, size_t n);
+void		*ft_memmove(void *dest, const void *src, size_t n);
+void		*ft_memchr(const void *s, int c, size_t n);
+int			ft_memcmp(const void *s1, const void *s2, size_t n);
 ///////////////////////////////////////////////
-size_t	ft_strlcpy(char *dest, const char *src, size_t size);
-size_t	ft_strlcat(char *dest, const char *src, size_t size);
+size_t		ft_strlcpy(char *dest, const char *src, size_t size);
+size_t		ft_strlcat(char *dest, const char *src, size_t size);
 ///////////////////////////////////////////////
-int		ft_toupper(int c);
-int		ft_tolower(int c);
+int			ft_toupper(int c);
+int			ft_tolower(int c);
 //////////////////////////////////////////////
-char	*ft_strchr(const char *s, int c);
-char	*ft_strrchr(char *s, int c);
-int		ft_strncmp(char *s1, char *s2, size_t n);
-char	*ft_strnstr(const char *big, const char *little, size_t len);
-char	*ft_strdup(const char *s);
-void	ft_striteri(char *s, void (*f)(unsigned int, char*));
-char	*ft_strmapi(char const *s, char (*f)(unsigned int, char));
-char	**ft_split(char const *s, char c);
-char	*ft_strjoin(char const *s1, char const *s2);
-char	*ft_strtrim(char const *s1, char const *set);
-char	*ft_substr(char const *s, unsigned int start, size_t len);
+char		*ft_strchr(const char *s, int c);
+char		*ft_strrchr(char *s, int c);
+int			ft_strncmp(char *s1, char *s2, size_t n);
+char		*ft_strnstr(const char *big, const char *little, size_t len);
+char		*ft_strdup(const char *s);
+void		ft_striteri(char *s, void (*f)(unsigned int, char*));
+char		*ft_strmapi(char const *s, char (*f)(unsigned int, char));
+char		**ft_split(char const *s, char c);
+char		*ft_strjoin(char const *s1, char const *s2);
+char		*ft_strjoin_free(char *s1, char *s2);
+char		*ft_strtrim(char const *s1, char const *set);
+char		*ft_strtrim2(char *s1, char *set);
+char		*ft_substr(char const *s, unsigned int start, size_t len);
 //////////////////////////////////////////////
 int			ft_atoi(const char *str);
+long long	ft_atol(const char *str);
+void		*ft_check_l(char *str, char **endptr);
 char		*ft_itoa(int n);
 //////////////////////////////////////////////
 void		*ft_calloc(size_t nmemb, size_t size);
@@ -135,13 +147,20 @@ int			ft_putstr(char *str);
 char		*get_next_line(int fd);
 char		**ft_minisplit(char *str);
 void		*ft_free_mat(char **mat, char *str);
-void		*ft_custom_function(size_t nmemb, size_t size, char *str, bool flag);
-char		*ft_strjoin_gnl(char const *s1, char const *s2);
+void		*ft_custom_function(size_t nmemb, size_t size, char
+				*str, bool flag);
+char		*ft_strjoin_gnl(char *s1, char *s2);
 char		*ft_strdup_gnl(const char *src);
 //////////////////////////////////////////////
 // Minishell
 t_token		*ft_lstnewtoken(t_token_type type, char *content);
 void		ft_tokenadd_back(t_token **lst, t_token *new);
 char		*ft_strndup(const char *s, size_t n);
+int			ft_lstsize_token(t_token *lst);
+int			ft_strlen_char(char *str, int c);
+void		tkn_delone(t_token **current, t_token *del);
+// INUTILS
+void		print_tokens_state(t_token *tokens);
+void		free_char_array(char **array);
 
 #endif
