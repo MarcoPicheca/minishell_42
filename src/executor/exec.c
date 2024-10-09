@@ -114,7 +114,7 @@ void	execute_command_single(char **command, t_data **data,
 				dup2((*data)->saved_fd, STDIN_FILENO);
 			close((*data)->saved_fd);
 		}
-		return (free((*data)->tmp9));
+		return (errno = g_err_state, free((*data)->tmp9));
 	}
 	process_command2(data, command);
 	holder = NULL;

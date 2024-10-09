@@ -21,7 +21,7 @@ int	env_cmd(t_data **data)
 	tkn = (*data)->tokens->next;
 	(*data)->merdoso = 1;
 	while (tkn && tkn->type != 7 && tkn->type != 4
-		&& tkn->type != 3 && tkn->type != 6)
+		&& tkn->type != 3 && tkn->type != 6 && tkn->type != 2)
 	{
 		if (tkn->type == TOKEN_WHITESPACE)
 			tkn = tkn->next;
