@@ -42,7 +42,10 @@ char	*tmp_set(char *val)
 
 void	process_command2(t_data **data, char **command)
 {
-	(*data)->cmd2 = find_cmd(command[0], data);
+	if ((*data)->merdoso == 0)
+		(*data)->cmd2 = find_cmd(command[0], data);
+	else if ((*data)->merdoso == 1)
+		(*data)->merdoso = 0;
 }
 
 static	int	redirect_builtin(t_data **data)
@@ -93,7 +96,7 @@ int	manual_cmd(char **cmd_args, t_data **data, t_token **token)
 	if (tmp->cmd == EXIT)
 		return (cmd_exit(data, token));
 	if (tmp->cmd == PWD)
-		return (pwd_cmd(data));
+		return (pwd_cmd());
 	return (0);
 }
 

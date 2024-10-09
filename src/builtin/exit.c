@@ -37,7 +37,7 @@ void	join_in_qt(t_token *tkn,
 		free(tmp);
 		tkn_delone(&current, current->next);
 	}
-	ft_printf("exit: %s: numeric argument required\n", tkn->value);
+	write(2, "exit: numeric argument required\n", 33);
 	return ;
 }
 
@@ -69,10 +69,10 @@ static	int	ft_too_long(char *val, t_data **data, t_token **token)
 	if (!val)
 		return (0);
 	if ((ft_strlen(val) - 1) > ft_strlen("-9223372036854775808"))
-		return (ft_printf("exit: %s: numeric argument required 1\n", val),
+		return (write(2, "exit: numeric argument required\n", 33),
 			free_exit_cmd(data, *token), 1);
 	if (ft_check_lon(ptr) != NULL)
-		return (ft_printf("exit: %s: numeric argument required 2\n", val),
+		return (write(2, "exit: numeric argument required\n", 33),
 			free_exit_cmd(data, *token), 1);
 	if (ft_atol(val) > 255)
 		g_err_state = ft_atol(val) / 256;

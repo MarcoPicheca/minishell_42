@@ -30,7 +30,6 @@ int	util_exp(t_data **data, t_token **current, t_token **tkn)
 		}
 		else
 			var = (*current)->value;
-		ft_printf("bash: export: `%s': not a valid identifier\n", var);
 		if (flag == 1)
 			free(var);
 		return (unset_env(tkn, &(*data)->env_list), 1);
@@ -40,22 +39,7 @@ int	util_exp(t_data **data, t_token **current, t_token **tkn)
 	return (0);
 }
 
-// static	int	ft_join_val(t_token *current, t_token *join)
-// {
-// 	char	*tmp;
-
-// 	tmp = current->value;
-// 	if (current && join && join->type != 7)
-// 	{
-// 		current->value = ft_strjoin(current->value, join->value);
-// 		ft_free_null(tmp);
-// 		tkn_delone(&current, join);
-// 		return (0);
-// 	}
-// 	return (1);
-// }
-
-int	inutil_exp(t_data **data, t_token **current, t_token **tkn, int *flag)
+int	inutil_exp(t_data **data, t_token **current, t_token **tkn)
 {
 	while (current && (*current) && (*current)->type != TOKEN_EOF)
 	{
@@ -72,33 +56,18 @@ int	inutil_exp(t_data **data, t_token **current, t_token **tkn, int *flag)
 		if ((*current)->value && ft_strsearch((*current)->value, '='))
 		{
 			if ((*current)->value[ft_strlen_char((*current)->value,
+						'=') - 2] == '-')
+				return (1);
+			if ((*current)->value[ft_strlen_char((*current)->value,
 						'=') - 2] == '+')
 				join_to_env((*current), data);
 			else
 				add_to_env((*current), data);
-			(*flag) = 1;
 		}
 		(*current) = (*current)->next;
 	}
 	return (0);
 }
-
-// void	util_join_in_qt(t_token *tkn, t_token *current,
-// 	t_token_type type, char *tmp)
-// {
-// 	current = tkn;
-// 	if (current->next && current->next->type == type && type != TOKEN_DOLLAR)
-// 		tkn_delone(&current, current->next);
-// 	while (current->next && current->next->type != type)
-// 	{
-// 		tmp = current->value;
-// 		current->value = ft_strjoin(current->value, current->next->value);
-// 		free(tmp);
-// 		tkn_delone(&current, current->next);
-// 	}
-// 	if (current->next && current->next->type == type && type != TOKEN_DOLLAR)
-// 		tkn_delone(&current, current->next);
-// }
 
 void	join_in_qt_exp(t_token *tkn)
 {

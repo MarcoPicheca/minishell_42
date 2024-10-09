@@ -12,14 +12,14 @@
 
 #include "../../inc/minishell.h"
 
-static int	ft_err_chdir(int err, char *val)
+static int	ft_err_chdir(int err)
 {
 	if (err == ENOENT)
-		return (g_err_state = err,
-			ft_printf("bash: cd: %s: No such file or directory\n", val));
+		return (g_err_state = err, errno = err,
+			perror(""), err);
 	else if (err == ENOTDIR)
-		return (g_err_state = err,
-			ft_printf("bash: cd: %s: Not a directory\n", val));
+		return (g_err_state = err, errno = err,
+			perror(""), err);
 	return (0);
 }
 
@@ -72,8 +72,7 @@ int	cd_cmd(t_data **data, t_token **tkn)
 		&& (current->next->value[0] != '>'
 			|| current->next->value[0] != '<'
 			|| current->next->value[0] != '|'))
-		return (g_err_state = 1,
-			ft_printf("bash: cd: too many arguments\n"));
+		return (g_err_state = 1, errno = 1, perror(""), 1);
 	node = (*data)->env_list;
 	if (current->value[0] == '\0')
 	{
@@ -83,7 +82,7 @@ int	cd_cmd(t_data **data, t_token **tkn)
 		current->value = ft_strndup(node->value, ft_strlen(node->value));
 	}
 	if (chdir(current->value) != 0)
-		return (ft_err_chdir((int)errno, current->value));
+		return (ft_err_chdir((int)errno));
 	chpwd(data);
 	return (g_err_state = 0, 1);
 }
