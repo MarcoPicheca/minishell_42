@@ -1,12 +1,12 @@
- /* ************************************************************************** */
+/* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
 /*   lexer_utils.c                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mapichec <mapichec@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/01 09:16:30 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/29 11:07:13 by mapichec         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,24 +15,27 @@
 t_token	*token_reformatting_pipe(t_token *current)
 {
 	current = current->next;
-	while (current && current->type == TOKEN_WHITESPACE)
-		current = current->next;
+	skip_tkn_space(&current);
 	if (current && current->type == TOKEN_WORD)
+	{
 		current->type = TOKEN_COMMAND;
-	while (current->type == TOKEN_WHITESPACE)
 		current = current->next;
-	if (current && current->next)
+	}
+	skip_tkn_space(&current);
+	if (current && current->next && current->type != TOKEN_WORD)
 		current = current->next;
 	while ((current && current->type == TOKEN_WORD)
 		|| current->type == TOKEN_WHITESPACE)
 	{
 		while (current && current->type != 7 && current->type == 11)
 			current = current->next;
-		if (current->type != TOKEN_PIPE)
+		if (current->type < 2 || current->type > 10)
 			current->type = TOKEN_APPENDICE;
 		if (current && current->next && current->type != TOKEN_PIPE)
 			current = current->next;
 	}
+	if (current->type == 9 || current->type == 10)
+		current = current->next;
 	return (current);
 }
 
@@ -41,8 +44,7 @@ t_token	*token_reformatting_command(t_token *current)
 	current->type = TOKEN_COMMAND;
 	if (current->next != NULL)
 		current = current->next;
-	while (current->type == TOKEN_WHITESPACE)
-		current = current->next;
+	skip_tkn_space(&current);
 	while ((current && current->type == 0 && current->type != 7)
 		|| current->type == TOKEN_OPTION || current->type == TOKEN_WHITESPACE
 		|| current->type == TOKEN_SINGLE_QUOTES
@@ -96,7 +98,7 @@ int	whitespace_case(char *buffer, char *end, t_token **tokens)
 	int	i;
 
 	i = 0;
-	while (*end == WHITESPACE)
+	while (*end == WHITESPACE || *end == '\t')
 	{
 		end++;
 		i++;

@@ -6,7 +6,7 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/01 09:42:28 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/31 17:19:35 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,48 +14,31 @@
 
 static void	sig_int(void)
 {
-	rl_on_new_line();
-	ft_putstr_fd("\n", STDOUT_FILENO);
-	rl_on_new_line();
-	rl_replace_line("", 0);
-	rl_redisplay();
+	rl_replace_line("\0", 0);
+	ioctl(STDIN_FILENO, TIOCSTI, "\n");
+	ioctl(STDIN_FILENO, TIOCSTI, NULL);
 }
 
 static void	sig_quit(void)
 {
-	rl_on_new_line();
-	rl_redisplay();
-	ft_putstr_fd("  \b\b", STDOUT_FILENO);
+	ft_putstr_fd("", STDOUT_FILENO);
 }
 
 static void	signal_handler(int signo)
 {
-	int	pid;
-	int	status;
-
-	pid = waitpid(-1, &status, 1);
 	if (signo == SIGINT)
 	{
 		g_err_state = 130;
-		errno = 130;
-		if (pid == -1)
-			sig_int();
-		else
-			ft_putstr_fd("\n", 1);
+		sig_int();
 	}
 	else if (signo == SIGQUIT)
-	{
-		if (pid == -1)
-			sig_quit();
-		else
-			ft_putstr_fd("\n", 1);
-	}
+		sig_quit();
 }
 
 void	set_signal(void)
 {
 	signal(SIGINT, signal_handler);
-	signal(SIGQUIT, signal_handler);
+	signal(SIGQUIT, SIG_IGN);
 }
 
 void	print_token_lists(t_token_list *token_lists)

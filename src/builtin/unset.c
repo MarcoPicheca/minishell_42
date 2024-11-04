@@ -34,7 +34,8 @@ void	roll_env(t_env_list **current, char *var_name)
 {
 	while ((*current))
 	{
-		if (ft_strncmp((*current)->var, var_name, ft_strlen(var_name)) == 0)
+		if (ft_strncmp((*current)->var, var_name,
+				ft_strlen((*current)->var) - 1) == 0)
 		{
 			free_node_env((*current));
 			break ;
@@ -46,7 +47,7 @@ void	roll_env(t_env_list **current, char *var_name)
 	}
 }
 
-int	unset_env(t_token **token, t_env_list **env)
+int	unset_env(t_token **token, t_env_list **env, t_data **data)
 {
 	t_env_list	*current;
 	t_token		*tkn;
@@ -57,8 +58,10 @@ int	unset_env(t_token **token, t_env_list **env)
 	while (tkn && tkn->type != TOKEN_EOF)
 	{
 		current = *env;
-		while (tkn->type == TOKEN_WHITESPACE)
+		while (tkn && tkn->next && tkn->type == TOKEN_WHITESPACE)
 			tkn = tkn->next;
+		if (tkn->type == 7)
+			break ;
 		if (ft_strsearch(tkn->value, '='))
 			var_name = ft_strndup(tkn->value, ft_strlen_char(tkn->value, '='));
 		else
@@ -70,5 +73,5 @@ int	unset_env(t_token **token, t_env_list **env)
 	}
 	if (var_name != NULL)
 		free(var_name);
-	return (g_err_state = 0, 1);
+	return ((*data)->local_err_state = 0, 1);
 }

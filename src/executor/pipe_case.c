@@ -6,154 +6,118 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/08/26 10:12:13 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/08 18:31:05 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/31 13:58:48 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../inc/minishell.h"
 
-static	int	exec_exit3(t_data **data, t_token **tokens, int *end, int print)
+int	exec_exit3(t_data **data, t_token **tokens, int *end, int print)
 {
 	int	i;
+
 	i = 0;
 	print = 0;
-	g_err_state = errno;
 	if ((*data)->env_p && print == 0)
 		free_char_array((*data)->env_p);
-	// close((*data)->fd);
-	while (i < (*data)->pipes)
+	while (i < (*data)->pipes * 2)
 	{
-		close(end[i * 2 + 1]);
+		close(end[i]);
 		i++;
 	}
+	close(STDOUT_FILENO);
 	free_env_list((*data)->env_list);
 	free_tokens(data, *tokens);
+	(*data)->tokens_ptr = NULL;
 	free((*data)->end);
+	if ((*data)->parent != NULL)
+		free((*data)->parent);
+	print = (*data)->local_err_state;
 	free((*data));
-	exit(g_err_state);
+	exit(print);
 }
 
-t_token	*create_token(t_token_type type, char *value)
+int	child_process_pipe(t_data **data, t_token *tokens,
+	t_token **tkn, pid_t *parent)
 {
-	t_token	*new_token;
-
-	new_token = (t_token *)malloc(sizeof(t_token));
-	if (!new_token)
-		return (NULL);
-	new_token->type = type;
-	new_token->value = ft_strndup(value, ft_strlen(value));
-	new_token->next = NULL;
-	return (new_token);
-}
-
-static	void copy_mtx2(t_data **data)
-{
-	t_env_list	*node;
-	int			i;
-	int			j;
-
-	i = 0;
-	node = (*data)->env_list;
-	while (node)
-	{
-		if (!node->next)
-		{
-			i++;
-			break;
-		}
-		else
-		{
-			i++;
-			node = node->next;
-		}
-	}
-	(*data)->env_p = ft_calloc(sizeof(char *), i + 1);
-	if (!(*data)->env_p)
-		return ;
-	node = (*data)->env_list;
-	j = 0;
-	while (node && j < i)
-	{
-		(*data)->env_p[j] = ft_strndup(node->content, ft_strlen(node->content));
-		node = node->next;
-		j++;
-	}
-}
-
-static	int	child_process_pipe(char **envp, t_data **data,
-	t_token *tokens, t_token **tkn)
-{
-	char		*holder;
 	t_token		*new_tokens;
 
 	new_tokens = extract_command_and_appendices(data, tokens);
-	holder = token_to_command(new_tokens);
-	envp = NULL;
-	if (!((*data)->fd < 0) && !envp)
-	{
-		if ((*data)->redirect_state == 1)
-		{
-			if (dup2((*data)->fd, STDOUT_FILENO) < 0)
-				return (-1);
-		}
-		if ((*data)->redirect_state == 0)
-		{
-			if (dup2((*data)->fd, STDIN_FILENO) < 0)
-				return (-1);
-		}
-	}
+	(*data)->command2 = token_to_command(new_tokens);
 	free_list(new_tokens);
 	copy_mtx2(data);
-	execute_command(holder, data, (*data)->env_p, tkn);
-	return (free_char_array((*data)->env_p), EXIT_SUCCESS);
+	free(parent);
+	signal(SIGQUIT, SIG_DFL);
+	execute_command(data, (*data)->env_p, tkn, &tokens);
+	free_char_array((*data)->env_p);
+	exit (EXIT_FAILURE);
 }
 
-static	void	pipe_opener(t_data **data, int *end)
+static	int	pipe_helper2(t_data **data, int *flag)
 {
-	int	j;
-
-	j = 0;
-	while (j < (*data)->pipes)
+	if (g_err_state == 130 && (*data)->heredoc_flag == 1)
 	{
-		pipe(end + (j * 2));
-		j++;
+		(*data)->local_err_state = 0;
+		*flag = 1;
 	}
-}
-
-static	void	init_pipe(t_data **data, t_token **tokens, int *i)
-{
-	(*data)->prev_fd = 0;
-	(*data)->pipes = count_pipes(*tokens);
-	*i = -1;
-	(*data)->end = ft_calloc(sizeof(int), (*data)->pipes * 2);
-}
-
-
-int	pipe_case(t_token **tokens, t_data **data,
-	char **envp, t_token_list **token_list)
-{
-	int				i;
-	pid_t			parent;
-	t_token_list	*current;
-
-	init_pipe(data, tokens, &i);
-	current = *token_list;
-	pipe_opener(data, (*data)->end);
-	while (++i <= (*data)->pipes)
+	if (*flag == 1)
 	{
-		remove_whitespace_nodes(&current->head);
-		parent = fork();
-		if (parent == 0)
+		(*data)->local_err_state = 130;
+		return (1);
+	}
+	return (0);
+}
+
+static	void	wait_for_childs(t_data **data, pid_t *parent, int i)
+{
+	while (i >= 0)
+	{
+		waitpid(parent[i--], &(*data)->status, 0);
+		if (WEXITSTATUS((*data)->status))
 		{
-			setup_pipe(i, (*data)->pipes, (*data)->prev_fd, (*data)->end);
-			close_pipes((*data)->end, (*data)->pipes);
-			if (redirect_parser(data, current->head))
-				exec_exit3(data, tokens, (*data)->end, ft_printf("not a file or directory!\n"));
-			child_process_pipe(envp, data, current->head, tokens);
+			(*data)->local_err_state = (*data)->status;
+			if ((*data)->local_err_state < 0 || (*data)->local_err_state >= 255)
+				(*data)->local_err_state = (*data)->local_err_state % 255;
+		}
+		else if (WIFSIGNALED((*data)->status))
+		{
+			if ((*data)->status == 2)
+				(*data)->local_err_state = 130;
+			if ((*data)->status == 131)
+				(*data)->local_err_state = 131;
 		}
 		else
-			parent_process2(data, i, (*data)->end, parent);
+			(*data)->local_err_state = (*data)->status;
+	}
+	free(parent);
+}
+
+int	pipe_case(t_token **tokens, t_data **data,
+	t_token_list **token_list)
+{
+	int				flag;
+	pid_t			*parent;
+	t_token_list	*current;
+
+	parent = (pid_t *)ft_calloc(sizeof(pid_t), (count_pipes(*tokens) + 2));
+	init_pipe(data, tokens, parent);
+	current = *token_list;
+	pipe_opener(data, (*data)->end, &flag);
+	while (++(*data)->counter <= (*data)->pipes)
+	{
+		if (redirect_parser_pipe(data, current->head))
+			exec_exit3(data, tokens, (*data)->end, 0);
+		if (pipe_helper2(data, &flag) > 0)
+			break ;
+		parent[(*data)->counter] = fork();
+		if (parent[(*data)->counter] == -1)
+			exit(write(2, "fork error!\n", 13));
+		if (parent[(*data)->counter] == 0)
+			pipe_helper(data, current, parent, tokens);
+		parent_process2(data, (*data)->counter, (*data)->end);
 		current = current->next;
 	}
-	return (free_char_array((*data)->env_p), free((*data)->end), 0);
+	wait_for_childs(data, parent, (*data)->counter);
+	return (free_char_array((*data)->env_p),
+		free((*data)->end), (*data)->end = NULL, 0);
 }

@@ -6,7 +6,7 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/07 12:28:18 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/29 12:48:25 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,7 +62,8 @@ t_token	*token_reformatting_special(t_token *current)
 		current->type = TOKEN_APPENDICE;
 	if (!current || current->type == TOKEN_EOF)
 		return (current);
-	current = current->next;
+	if (current && current->type < 2 && current->type > 7)
+		current = current->next;
 	return (current);
 }
 
@@ -94,7 +95,7 @@ t_token	*copy_token_list(t_data **data, t_token *tokens)
 	return (new_list);
 }
 
-void	parent_process2(t_data **data, int i, int *end, int parent)
+void	parent_process2(t_data **data, int i, int *end)
 {
 	if (i > 0)
 		close((*data)->prev_fd);
@@ -103,5 +104,6 @@ void	parent_process2(t_data **data, int i, int *end, int parent)
 		close(end[i * 2 + 1]);
 		(*data)->prev_fd = end[i * 2];
 	}
-	waitpid(parent, NULL, 0);
+	(*data)->redirect_state_out = -1;
+	(*data)->redirect_state_in = -1;
 }

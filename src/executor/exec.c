@@ -12,149 +12,76 @@
 
 #include "../../inc/minishell.h"
 
-static	int copy_mtx1(t_data **data)
+static	void	child_process(char **cmd_args, t_data **data,
+	t_token **tokens)
 {
-	t_env_list	*node;
-	int			i;
-	int			j;
-
-	i = 0;
-	node = (*data)->env_list;
-	while (node)
+	if ((*data)->redirect_state_out > 0)
 	{
-		if (!node->next)
-		{
-			i++;
-			break;
-		}
-		else
-		{
-			i++;
-			node = node->next;
-		}
+		(*data)->saved_fd = dup(STDOUT_FILENO);
+		if (dup2((*data)->fd_out, STDOUT_FILENO) < 0)
+			exec_exit(data, tokens, 1);
 	}
-	(*data)->env_p = ft_calloc(sizeof(char *), i + 1);
-	if (!(*data)->env_p)
-		return (0);
-	node = (*data)->env_list;
-	j = 0;
-	while (node && j <= i)
+	if ((*data)->redirect_state_in > 0)
 	{
-		(*data)->env_p[j] = ft_strndup(node->content, ft_strlen(node->content));
-		node = node->next;
-		j++;
-	}
-	return (1);
-}
-
-int	exec_exit(t_data **data, t_token **tokens, int print)
-{
-	errno = print;
-	g_err_state = errno;
-	free_env_list((*data)->env_list);
-	free_tokens(data, (*tokens));
-	free_char_array((*data)->env_p);
-	free((*data));
-	exit(g_err_state);
-}
-
-static	int	child_process(char **cmd_args, t_data **data,
-	char **envp, t_token **tokens)
-{
-	if (!((*data)->fd < 0))
-	{
-		if ((*data)->redirect_state == 1)
-		{
-			if (dup2((*data)->fd, STDOUT_FILENO) < 0)
-				return (-1);
-		}
-		if ((*data)->redirect_state == 0)
-		{
-			if (dup2((*data)->fd, STDIN_FILENO) < 0)
-				return (-1);
-		}
+		if (dup2((*data)->fd_in, STDIN_FILENO) < 0)
+			exec_exit(data, tokens, 1);
 	}
 	if ((*data)->cmd2 && cmd_args && copy_mtx1(data))
 	{
 		(*data)->cmd2 = trim_quotes((*data)->cmd2);
-		if (execve((*data)->cmd2, cmd_args, envp) != 0)
+		(*data)->local_err_state = (*data)->local_err_state % 256;
+		signal(SIGQUIT, SIG_DFL);
+		if (execve((*data)->cmd2, cmd_args, (*data)->env_p) != 0)
 			exec_exit(data, tokens, 126);
 	}
-	else
-		exec_exit(data, tokens, 127);
-	return (free_char_array((*data)->env_p), EXIT_SUCCESS);
+	exec_exit(data, tokens, 127);
 }
 
-static	int	parent_process(void)
+static	void	parent_process(t_data **data)
 {
 	int	status;
 
+	status = 0;
 	waitpid(-1, &status, 0);
-	return (status);
+	if (WEXITSTATUS(status))
+	{
+		(*data)->local_err_state = status;
+		if ((*data)->local_err_state < 0 || (*data)->local_err_state >= 255)
+			(*data)->local_err_state = (*data)->local_err_state % 255;
+	}
+	else if (WIFSIGNALED(status))
+	{
+		if (g_err_state == 130 || status == 2)
+			(*data)->local_err_state = 130;
+		if (g_err_state == 131 || status == 131)
+			(*data)->local_err_state = 131;
+	}
+	else
+		(*data)->local_err_state = status;
 }
 
-
 void	execute_command_single(char **command, t_data **data,
-		char **envp, t_token **tokens)
+		t_token **tokens)
 {
 	pid_t	parent;
-	char	*holder;
 	int		i;
 
 	(*data)->saved_fd = -1;
 	init_execution(data, &i);
 	(*data)->tmp9 = ft_strjoin(command[0], " ");
 	if (manual_cmd(command, data, tokens))
-	{
-		if ((*data)->saved_fd >= 0)
-		{
-			if ((*data)->redirect_state == 1)
-				dup2(STDIN_FILENO, STDOUT_FILENO);
-			else if ((*data)->redirect_state == 0)
-				dup2((*data)->saved_fd, STDIN_FILENO);
-			close((*data)->saved_fd);
-		}
-		return (errno = g_err_state, free((*data)->tmp9));
-	}
+		return (command_single_helper(data),
+			free((*data)->tmp9));
 	process_command2(data, command);
-	holder = NULL;
-	while (command[i])
-	{
-		holder = ft_strjoin_gnl((*data)->tmp9, command[i++]);
-		(*data)->tmp9 = holder;
-	}
 	(*data)->cmd_args = ft_split((*data)->tmp9, 32);
 	free((*data)->tmp9);
+	(*data)->tmp9 = NULL;
 	parent = fork();
 	if (parent < 0)
 		free_exit(data);
 	if (!parent)
-		child_process(command, data, envp, tokens);
+		child_process(command, data, tokens);
 	else
-		g_err_state = parent_process();
+		parent_process(data);
 	return ;
-}
-
-void	remove_whitespace_nodes(t_token **head)
-{
-	t_token	*current;
-	t_token	*prev;
-
-	current = *head;
-	prev = NULL;
-	while (current != NULL)
-	{
-		if (is_whitespace(current->value))
-		{
-			if (prev == NULL)
-				space_helper(head, &current, &prev, 0);
-			else
-				space_helper(head, &current, &prev, 1);
-		}
-		else
-		{
-			prev = current;
-			current = current->next;
-		}
-	}
 }

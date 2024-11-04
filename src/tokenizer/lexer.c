@@ -6,101 +6,101 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/04 17:11:50 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/31 16:38:16 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../inc/minishell.h"
 
-void	token_reformatting(t_token **tokens)
+int	check_type(t_token *current)
+{
+	if (current && current->type != 0 && current->type != 1
+		&& current->type != 11)
+		return (1);
+	else
+		return (0);
+}
+
+static	int	invalid_tkn_sequence(t_token_type prev_type, t_token_type curr_type)
+{
+	if (prev_type == 2 && curr_type == 2)
+		return (1);
+	if (prev_type == 4 && (curr_type == 2
+			|| curr_type == 4 || curr_type == 5
+			|| curr_type == 7))
+		return (1);
+	if (prev_type == 3 && (curr_type == 3 || curr_type == 7
+			|| curr_type == 4))
+		return (1);
+	if (prev_type == 6 && (curr_type == 3
+			|| curr_type == 4 || curr_type == 6
+			|| curr_type == 7))
+		return (1);
+	if (prev_type == 5 && (curr_type == 6
+			|| curr_type == 3 || curr_type == 4
+			|| curr_type == 5 || curr_type == 7))
+		return (1);
+	return (0);
+}
+
+static	void	check_syntax_err2(t_token **current, t_token **previous)
+{
+	t_token_type	type;
+
+	type = 0;
+	type = (*current)->type;
+	(*current) = (*current)->next;
+	while ((*current) && (*current)->type != type && (*current)->type != 7)
+		(*current) = (*current)->next;
+	*previous = *current;
+	if ((*current) && (*current)->type == type)
+		(*current) = (*current)->next;
+}
+
+static	int	check_syntax_errors(t_token *tokens)
+{
+	t_token	*current;
+	t_token	*previous;
+
+	current = tokens;
+	previous = NULL;
+	while (current != NULL)
+	{
+		if (current->type == 9 || current->type == 10)
+			check_syntax_err2(&current, &previous);
+		if (previous == NULL && current->type == 2)
+			return (1);
+		if (previous != NULL
+			&& invalid_tkn_sequence(previous->type, current->type))
+			return (1);
+		if (current->next && current->type != 7 && current->type == 11)
+		{
+			current = current->next;
+			continue ;
+		}
+		previous = current;
+		current = current->next;
+	}
+	if (current && current->type == 7 && previous && previous->type == 2)
+		return (1);
+	return (0);
+}
+
+int	token_reformatting(t_token **tokens, t_data **data)
 {
 	t_token		*head;
 	t_token		*current;
 
 	head = *tokens;
 	current = *tokens;
+	if (check_syntax_errors(*tokens) > 0)
+		return (write(2, "syntax error\n", 14),
+			(*data)->local_err_state = 2, 1);
+	if (check_spaces(*tokens))
+		return ((*data)->local_err_state = 0, 1);
 	while (current && current->type != TOKEN_EOF)
-	{
-		while (current->type == TOKEN_WHITESPACE)
-			current = current->next;
-		while (current->type == TOKEN_DOUBLE_QUOTES)
-			current = current->next;
-		if ((current && current->type == TOKEN_EOF) || current == NULL)
-			return ;
-		if (current && current->type == TOKEN_PIPE)
-			current = token_reformatting_pipe(current);
-		if (current->type == TOKEN_DOLLAR)
-			current = current->next;
-		if (current && current->type != TOKEN_WORD
-			&& current->type != TOKEN_OPTION
-			&& current->type != 11)
-			current = token_reformatting_special(current);
-		if (current && current->type == TOKEN_WORD)
-			current = token_reformatting_command(current);
-		else if (current && current->type != TOKEN_PIPE)
-			current = current->next;
-	}
-	current = head;
-}
-
-int	find_special(char c)
-{
-	if (c && c != WHITESPACE && c != REDIRECT_LEFT
-		&& c != PIPE && c != REDIRECT_RIGHT && c != '$'
-		&& c != DOUBLE_QUOTES && c != SINGLE_QUOTES)
-		return (0);
-	else
-		return (1);
-}
-
-void	token_builder(t_token **tokens, char *buffer, char *end, int flag)
-{
-	if (flag == 0)
-	{
-		ft_tokenadd_back(tokens, ft_lstnewtoken(1,
-				ft_strndup(buffer, end - buffer)));
-	}
-	else
-	{
-		ft_tokenadd_back(tokens, ft_lstnewtoken(0,
-				ft_strndup(buffer, end - buffer)));
-	}
-}
-
-void	recognizer(char *buffer, t_token **tokens,
-		char *end, t_data **data)
-{
-	while (*buffer)
-	{
-		end = buffer;
-		if (*buffer == WHITESPACE)
-		{
-			buffer = buffer + whitespace_case(buffer, end, tokens);
-			continue ;
-		}
-		if (*buffer == '<' || *buffer == '>' || *buffer == '|' || *buffer == '$'
-			|| *buffer == SINGLE_QUOTES || *buffer == DOUBLE_QUOTES)
-		{
-			buffer = buffer + special_cases_lexer(data, buffer, tokens, end);
-			continue ;
-		}
-		end = buffer;
-		while (*end && find_special(*end) < 1)
-			end++;
-		if (*buffer == '-')
-			token_builder(tokens, buffer, end, 0);
-		else
-			token_builder(tokens, buffer, end, 1);
-		buffer = end;
-	}
-	ft_tokenadd_back(tokens, ft_lstnewtoken(7, ft_strndup(buffer, *buffer)));
-}
-
-int	init_state(t_data **data, t_token **tokens, char *tmp)
-{
-	if (data)
-		*tokens = NULL;
-	if (!tmp)
-		return (1);
-	return (0);
+		token_reformatting_helper(&current);
+	if (check_token_type(*tokens) < 0)
+		return ((*data)->local_err_state = 127, 1);
+	return (current = head, 0);
 }

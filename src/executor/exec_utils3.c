@@ -6,7 +6,7 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/07 12:29:18 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/07 15:15:46 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/18 17:00:07 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,8 @@ t_token	*extract_command_and_appendices(t_data **data, t_token *tokens)
 	init_extraction(&result, &current, data, tokens);
 	while (current)
 	{
-		if (current->type == TOKEN_WHITESPACE)
+		if (current->type == 11 || current->type == 10
+			|| current->type == 9)
 		{
 			current = current->next;
 			continue ;
@@ -39,7 +40,7 @@ t_token	*extract_command_and_appendices(t_data **data, t_token *tokens)
 			append_token(&result, create_token(current->type, current->value));
 		}
 		else if ((*data)->command_found && (current->type == 13
-				|| current->type == 1))
+				|| current->type == 1 || current->type == 14))
 			append_token(&result, create_token(current->type, current->value));
 		else if ((*data)->command_found)
 			break ;
@@ -57,7 +58,7 @@ int	init_execution(t_data **data, int *i)
 
 int	compare_path(char *str)
 {
-	if (str[0] == '/')
+	if (str && str[0] == '/')
 		return (1);
 	return (0);
 }

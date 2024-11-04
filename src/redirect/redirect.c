@@ -3,137 +3,103 @@
 /*                                                        :::      ::::::::   */
 /*   redirect.c                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mapichec <mapichec@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 14:04:42 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/08 18:27:15 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/30 19:16:56 by mapichec         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../inc/minishell.h"
 
-int	is_whitespace(const char *str)
+static	void	cmd_args_filler(t_data **data, t_token **tokens,
+	char **cmd_args, t_token **tkn)
 {
-	while (*str)
+	(*data)->tmp6 = (*data)->tmp90;
+	(*data)->command2 = (*data)->cmd42;
+	(*data)->cmd_args_exit = cmd_args;
+	if (manual_cmd(cmd_args, data, tokens))
 	{
-		if (!isspace((unsigned char)*str))
-			return (0);
-		str++;
+		free((*data)->tmp90);
+		(*data)->tmp90 = NULL;
+		free((*data)->cmd42);
+		(*data)->cmd42 = NULL;
+		manual_helper(data, tkn, cmd_args);
 	}
-	return (1);
 }
 
-void	space_helper(t_token **head, t_token **current,
-	t_token **prev, int flag)
+static	void	execution_init_helper(t_data **data, t_token **current,
+	t_token **tokens)
 {
-	if (flag == 0)
+	t_token	*head;
+
+	head = *tokens;
+	*current = *tokens;
+	(*data)->tmp90 = NULL;
+	while ((*current)->type != TOKEN_EOF)
 	{
-		(*head) = (*current)->next;
-		free((*current)->value);
-		free((*current));
-		(*current) = (*head);
+		if ((*current)->type == TOKEN_COMMAND)
+			(*data)->tmp90 = ft_strdup((*current)->value);
+		*current = (*current)->next;
+	}
+	*current = head;
+	command_extractor(data, *current);
+}
+
+static	char	**execution_helper3(t_data **data)
+{
+	char	**cmd_args;
+
+	if ((*data)->tmp90 && (*data)->tmp90 != NULL)
+	{
+		cmd_args = ft_split((*data)->tmp90, '\n');
+		(*data)->cmd42 = ft_strdup(cmd_args[0]);
 	}
 	else
 	{
-		(*prev)->next = (*current)->next;
-		free((*current)->value);
-		free((*current));
-		(*current) = (*prev)->next;
+		(*data)->cmd42 = NULL;
+		cmd_args = NULL;
 	}
-}
-
-t_token	*new_node(const char *content)
-{
-	t_token	*node;
-
-	node = (t_token *)malloc(sizeof(t_token));
-	if (!node)
-		return (NULL);
-	node->value = ft_strdup(content);
-	node->type = 0;
-	node->next = NULL;
-	return (node);
-}
-
-static	int	exec_exit2(t_data **data, t_token **tokens,
-		char **cmd_args, int print)
-{
-	print = 0;
-	g_err_state = errno;
-	if (cmd_args && print == 0)
-		free_char_array(cmd_args);
-	if ((*data)->env_p)
-		free_char_array((*data)->env_p);
-	free_env_list((*data)->env_list);
-	free_tokens(data, (*tokens));
-	free((*data)->end);
-	free((*data));
-	exit(g_err_state);
-}
-
-int	execute_command(char *command, t_data **data, char **envp, t_token **tkn)
-{
-	char	*cmd;
-	char	**cmd_args;
-	char	*holder;
-	int		i;
-
-	cmd_args = ft_split(command, 32);
-	free(command);
-	cmd = cmd_args[0];
+	if ((*data)->tmp90 && !cmd_args)
+		cmd_args[0] = ft_strdup((*data)->tmp90);
+	free((*data)->command2);
 	(*data)->tmp6 = NULL;
-	if (manual_cmd(cmd_args, data, tkn))
-	{
-		if ((*data)->saved_fd >= 0)
-		{
-			if ((*data)->redirect_state == 1)
-				dup2(STDIN_FILENO, STDOUT_FILENO);
-			else if ((*data)->redirect_state == 0)
-				dup2((*data)->saved_fd, STDIN_FILENO);
-			close((*data)->saved_fd);
-		}
-		return (exec_exit2(data, tkn, cmd_args, 0));
-	}
-	holder = find_cmd(cmd, data);
-	i = 1;
-	while (cmd_args[i])
-	{
-		(*data)->tmp6 = ft_strjoin_gnl((*data)->tmp6,
-				trim_whitespace(cmd_args[i]));
-		i++;
-	}
-	if (!holder)
-		holder = ft_strndup(cmd, ft_strlen(cmd));
-	if (execve(holder, cmd_args, envp) != 0)
-	{
-		free(holder);
-		free((*data)->tmp6);
-		exec_exit2(data, tkn, cmd_args, 0);
-	}
-	return (0);
+	return (cmd_args);
 }
 
-int	handle_heredoc(char *delimiter, t_data **data)
+static	void	execution_helper4(t_data **data, char **cmd_args,
+	t_token *tokens, t_token *tkn)
 {
-	char		*line;
+	if (cmd_args)
+		cmd_args_filler(data, &tokens, cmd_args, &tkn);
+	if ((*data)->cmd42)
+		(*data)->holder = find_cmd((*data)->cmd42, data);
+	else
+		(*data)->holder = NULL;
+}
 
-	if ((*data)->fd < 0)
-		exit (ft_printf("Failed to open heredoc temporary file"));
-	signal_doc();
-	while (1)
+int	execute_command(t_data **data, char **envp, t_token **tkn, t_token **tokens)
+{
+	char	**cmd_args;
+	t_token	*current;
+
+	execution_init_helper(data, &current, tokens);
+	cmd_args = execution_helper3(data);
+	execution_helper4(data, cmd_args, *tokens, *tkn);
+	if ((*data)->cmd42 && !(*data)->holder)
 	{
-		line = readline("> ");
-		if (!line || ft_strncmp(line, delimiter, ft_strlen(line)) == 0)
-		{
-			free(line);
-			break ;
-		}
-		if (ft_strsearch(line, '$'))
-			line = expander_doc(line, data);
-		write((*data)->fd, line, ft_strlen(line));
-		write((*data)->fd, "\n", 1);
-		free(line);
+		if (cmd_args)
+			free_char_array(cmd_args);
+		cmd_args = ft_calloc(sizeof(char **), 1);
+		(*data)->holder = ft_strndup((*data)->cmd42, ft_strlen((*data)->cmd42));
 	}
-	close((*data)->fd);
+	if ((*data)->cmd42)
+		free((*data)->cmd42);
+	if (cmd_args)
+		execve((*data)->holder, cmd_args, envp);
+	usleep(30000);
+	if (check_token_type(*tokens) < 0)
+		(*data)->local_err_state = 127;
+	cleanup_helper(data, cmd_args, *tkn);
 	return (0);
 }

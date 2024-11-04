@@ -6,7 +6,7 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/07 12:27:37 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/31 16:21:37 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,49 +58,42 @@ int	ft_strsearch(char *str, int c)
 	return (0);
 }
 
-// static	t_token	*join_in_qt_cm(t_token *tkn)
-// {
-// 	t_token			*current;
-// 	t_token_type	type;
-// 	char			*tmp;
+static	void	clean_qt_helper(t_token **node)
+{
+	t_token	*new;
 
-// 	current = tkn;
-// 	while (current && current->type == 11)
-// 		current = current->next;
-// 	if (current->type != 9 && current->type != 10)
-// 		return (tkn);
-// 	type = current->type;
-// 	current = current->next;
-// 	while (current->next && current->next->type != type)
-// 	{
-// 		tmp = current->value;
-// 		current->value = ft_strjoin(current->value, current->next->value);
-// 		free(tmp);
-// 		tkn_delone(&current, current->next);
-// 	}
-// 	if (current->type == 12 || current->type == 9
-// 		|| current->type == 10 || current->type == 14)
-// 		current = current->next;
-// 	return (current);
-// }
+	new = NULL;
+	tkn_delone(&(*node), (*node)->next);
+	tkn_delone(&(*node), (*node)->next);
+	new = (t_token *)ft_calloc(sizeof(t_token), 1);
+	new->value = ft_strndup("", 2);
+	new->type = 14;
+	if (!(*node)->next)
+		new->next = NULL;
+	if ((*node)->next)
+		new->next = (*node)->next;
+	(*node)->next = new;
+}
 
 void	clean_qt(t_token **tkn)
 {
 	t_token	*node;
 
 	node = *tkn;
-	// while (node && node->type != TOKEN_EOF)
-	// {
-	// 	if (node->type == 9 || node->type == 10)
-	// 		node = join_in_qt_cm(node);
-	// 	if (node && node->type != TOKEN_EOF)
-	// 		node = node->next;
-	// }
-	// node = *tkn;
 	while (node && node->type != TOKEN_EOF)
 	{
+		if (node->next && node->next->next
+			&& (node->next->type == 9 || node->next->type == 10)
+			&& node->next->type == node->next->next->type)
+		{
+			clean_qt_helper(&node);
+			continue ;
+		}
 		if (node->next->type == 9 || node->next->type == 10)
+		{
 			tkn_delone(&node, node->next);
+			continue ;
+		}
 		if (node && node->type != TOKEN_EOF)
 			node = node->next;
 	}

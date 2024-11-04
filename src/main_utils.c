@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main_utils.c                                       :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mapichec <mapichec@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/08 17:51:39 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/26 13:31:22 by mapichec         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -34,13 +34,6 @@ int	env_parser(t_data **data, char **envp)
 {
 	if (!(*data)->env_list)
 		gen_list_env(data, envp);
-	// if ((*data)->input[0] == '/')
-	// {
-	// 	(*data)->path_from_envp = NULL;
-	// 	(*data)->my_paths = NULL;
-	// 	(*data)->my_line = NULL;
-	// 	return (0);
-	// }
 	(*data)->my_line = retrieve_line((*data)->env_list);
 	if (!(*data)->my_line)
 	{
@@ -48,7 +41,6 @@ int	env_parser(t_data **data, char **envp)
 		(*data)->my_paths = NULL;
 		(*data)->merdoso = 1;
 		return (1);
-		// return (write(1, "PATH not found!\n", 16));
 	}
 	(*data)->path_from_envp = ft_substr((*data)->my_line, 5, 500);
 	(*data)->my_paths = ft_split((*data)->path_from_envp, ':');
@@ -86,9 +78,9 @@ int	piper(t_token **tokens)
 	t_token	*current;
 
 	current = *tokens;
-	while (current->type != TOKEN_EOF)
+	while (current && current->type != TOKEN_EOF)
 	{
-		if (current->type == TOKEN_PIPE)
+		if (current && current->type == TOKEN_PIPE)
 			return (1);
 		current = current->next;
 	}

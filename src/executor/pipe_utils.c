@@ -6,55 +6,11 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/09/21 18:41:39 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/01 10:19:22 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/31 15:22:13 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../inc/minishell.h"
-
-size_t	calculate_command_length(t_token *head)
-{
-	size_t	total_length;
-	t_token	*current;
-
-	total_length = 0;
-	current = head;
-	while (current)
-	{
-		total_length += ft_strlen(current->value);
-		if (current->next != NULL)
-			total_length += 1;
-		current = current->next;
-	}
-	return (total_length);
-}
-
-char	*token_to_command(t_token *head)
-{
-	size_t	command_length;
-	char	*command;
-	t_token	*current;
-
-	if (!head)
-		return (NULL);
-	command_length = calculate_command_length(head);
-	command = (char *)malloc(command_length + 1);
-	if (!command)
-	{
-		perror("malloc");
-		return (NULL);
-	}
-	command[0] = '\0';
-	current = head;
-	while (current)
-	{
-		ft_strcat(command, current->value);
-		if (current->next != NULL)
-			ft_strcat(command, " ");
-		current = current->next;
-	}
-	return (command);
-}
 
 int	count_pipes(t_token *head)
 {
@@ -86,13 +42,56 @@ void	close_pipes(int *end, int pipes)
 	}
 }
 
-void	setup_pipe(int i, int pipes, int prev_fd, int *end)
+void	redirection_out_case_helper(t_data **data, int *end)
 {
-	if (i > 0)
+	free((*data)->parent);
+	(*data)->parent = NULL;
+	if ((*data)->in_tmp > 0)
+		close((*data)->in_tmp);
+	if ((*data)->fd_in > 0)
+		close((*data)->fd_in);
+	if ((*data)->fd > 0)
+		close((*data)->fd);
+	if ((*data)->fd_out > 0)
+		close((*data)->fd_out);
+	exec_exit3(data, &(*data)->tokens_ptr, end, 0);
+}
+
+void	redirection_in_case_helper(t_data **data, int *end)
+{
+	heredoc_unlink(data);
+	if ((*data)->in_tmp > 0)
+		close((*data)->in_tmp);
+	if ((*data)->fd_in > 0)
+		close((*data)->fd_in);
+	if ((*data)->fd > 0)
+		close((*data)->fd);
+	if ((*data)->fd_out > 0)
+		close((*data)->fd_out);
+	exec_exit3(data, &(*data)->tokens_ptr, end, 0);
+}
+
+void	setup_helper(t_data **data, int *end)
+{
+	if ((*data)->redirect_state_in > 0 && (*data)->hd_flag > 0)
 	{
-		dup2(prev_fd, STDIN_FILENO);
-		close(prev_fd);
+		dup2((*data)->fd_in, STDIN_FILENO);
+		if ((*data)->fd_in < 0)
+			redirection_in_case_helper(data, end);
+		close((*data)->fd_in);
 	}
-	if (i < pipes)
-		dup2(end[i * 2 + 1], STDOUT_FILENO);
+	else if ((*data)->redirect_state_in == 0)
+	{
+		dup2((*data)->prev_fd, STDIN_FILENO);
+		if ((*data)->prev_fd < 0)
+			redirection_in_case_helper(data, end);
+		close((*data)->prev_fd);
+	}
+	else if ((*data)->redirect_state_in > 0)
+	{
+		dup2((*data)->fd_in, STDIN_FILENO);
+		if ((*data)->fd_in < 0)
+			redirection_in_case_helper(data, end);
+		close((*data)->fd_in);
+	}
 }

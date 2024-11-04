@@ -6,18 +6,18 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/08 16:13:14 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/29 17:09:23 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../inc/minishell.h"
 
-void	command_init(t_data *data, t_token *tokens, char **envp)
+void	command_init(t_data *data, t_token *tokens)
 {
 	if (piper(&tokens) == 0)
-		token_parser(&tokens, &data, envp);
+		token_parser(&tokens, &data);
 	else
-		do_pipe(data, tokens, envp);
+		do_pipe(data, tokens);
 }
 
 int	init_data(t_data **data, int argc, char **argv, t_token **tokens)
@@ -80,27 +80,21 @@ void	free_tokens_helper(t_data **data)
 		free_char_array((*data)->cmd_args);
 		(*data)->cmd_args = NULL;
 	}
+	(*data)->redirect_state_out = -1;
+	(*data)->redirect_state_in = -1;
 }
 
-void	free_tokens(t_data **data, t_token *tokens)
+char	*trim_whitespace(char *str)
 {
-	if (tokens)
-		free_list(tokens);
-	heredoc_unlink(data);
-	if ((*data)->tokens)
-		free_list((*data)->tokens);
-	if ((*data)->token_list != NULL)
-		free_token_list((*data)->token_list);
-	if ((*data)->fd >= 0)
-		(*data)->fd = -1;
-	if ((*data)->path_from_envp)
-		free((*data)->path_from_envp);
-	if ((*data)->command)
-		free_char_array((*data)->command);
-	if ((*data)->my_paths)
-		free_char_array((*data)->my_paths);
-	if ((*data)->my_line)
-		free((*data)->my_line);
-	free_tokens_helper(data);
-	free((*data)->input);
+	char	*end;
+
+	while (*str == 32)
+		str++;
+	if (*str == 0)
+		return (str);
+	end = str + ft_strlen(str) - 1;
+	while (end > str && *end == 32)
+		end--;
+	*(end + 1) = '\0';
+	return (str);
 }

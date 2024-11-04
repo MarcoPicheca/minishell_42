@@ -3,17 +3,27 @@
 /*                                                        :::      ::::::::   */
 /*   parser.c                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
+/*   By: mapichec <mapichec@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/10 14:04:42 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/03 19:24:52 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/31 15:01:31 by mapichec         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../inc/minishell.h"
 
+static	void	close_helper(t_data **data)
+{
+	if ((*data)->fd >= 0)
+		close((*data)->fd);
+	if ((*data)->fd_in >= 0)
+		close((*data)->fd_in);
+	if ((*data)->fd_out >= 0)
+		close((*data)->fd_out);
+}
+
 static	int	call_for_command(t_token **tokens, t_data **data,
-		t_token **origin, char **envp)
+		t_token **origin)
 {
 	t_token		*current;
 	int			i;
@@ -25,9 +35,9 @@ static	int	call_for_command(t_token **tokens, t_data **data,
 	while (current->type == 13 || current->type == 1
 		|| current->type == 8 || current->type == 11)
 	{
-		if (current->type == TOKEN_WHITESPACE)
+		while (current->type == 11 || current->type == 10 || current->type == 9)
 			current = current->next;
-		if (current->type == TOKEN_APPENDICE)
+		if (current->type == TOKEN_APPENDICE || current->type == 14)
 		{
 			(*data)->command[i] = ft_strdup(current->value);
 			current = current->next;
@@ -36,28 +46,9 @@ static	int	call_for_command(t_token **tokens, t_data **data,
 			break ;
 		i++;
 	}
-	execute_command_single((*data)->command, data, envp, tokens);
-	if ((*data)->fd >= 0)
-		close((*data)->fd);
+	execute_command_single((*data)->command, data, tokens);
+	close_helper(data);
 	return (0);
-}
-
-static	int	token_words(t_token *token)
-{
-	int		i;
-	t_token	*tmp;
-
-	tmp = token;
-	i = 0;
-	while (tmp && tmp->type != TOKEN_EOF)
-	{
-		if (tmp->type == TOKEN_WHITESPACE)
-			;
-		else
-			i++;
-		tmp = tmp->next;
-	}
-	return (i + 1);
 }
 
 static	int	parser_init(t_data **data)
@@ -71,27 +62,17 @@ static	int	parser_init(t_data **data)
 	return (0);
 }
 
-int	redirect_parser(t_data **data, t_token *current)
+static	int	return_checker(t_data **data, t_token *current, t_token **tokens)
 {
-	int	i;
-
-	i = 0;
-	while (current != NULL)
-	{
-		if (current->type == TOKEN_REDIRECT_OUT)
-			i = parser_case_redo(current, data);
-		else if (current->type == TOKEN_REDIRECT_IN)
-			i = parser_case_redi(current, data);
-		else if (current->type == TOKEN_APPEND)
-			i = parser_case_append(current, data);
-		else if (current->type == TOKEN_HEREDOC)
-			i = parser_case_herdoc(current, data);
-		current = current->next;
-	}
-	return (i);
+	if (redirect_parser(data, current, tokens) > 0)
+		return (write(2, "syntax error\n", 14),
+			(*data)->local_err_state = 2, 1);
+	if (g_err_state == 130)
+		return (1);
+	return (0);
 }
 
-int	token_parser(t_token **tokens, t_data **data, char **envp)
+int	token_parser(t_token **tokens, t_data **data)
 {
 	t_token		*current;
 
@@ -100,16 +81,19 @@ int	token_parser(t_token **tokens, t_data **data, char **envp)
 	current = *tokens;
 	while (current && current->type != TOKEN_EOF)
 	{
-		if (redirect_parser(data, current) > 0)
-			return (errno = 2, write(2, "command not found!\n", 20), 1);
-		if (current->type == 12 || current->type == TOKEN_WORD_QT)
+		if ((*data)->heredoc_flag == 0)
+			if (return_checker(data, current, tokens) > 0)
+				return (1);
+		if ((*data)->skip_flag > 0)
+			return (0);
+		if (current->type == 12 || current->type == 14)
 		{
-			if (!call_for_command(tokens, data, &current, envp))
+			if (!call_for_command(tokens, data, &current))
 				return (0);
 			else
 				free_exit(data);
 		}
 		current = current->next;
 	}
-	return (0);
+	return (close_helper(data), 0);
 }

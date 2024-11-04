@@ -6,7 +6,7 @@
 /*   By: adapassa <adapassa@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/07/05 15:01:08 by adapassa          #+#    #+#             */
-/*   Updated: 2024/10/07 16:07:15 by adapassa         ###   ########.fr       */
+/*   Updated: 2024/10/31 16:32:37 by adapassa         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -14,6 +14,7 @@
 
 void	heredoc_unlink(t_data **data)
 {
+	g_err_state = 0;
 	if ((*data)->heredoc_flag > 0)
 	{
 		(*data)->heredoc_flag = 0;
@@ -34,8 +35,10 @@ static void	inutils_num(t_token *tmp, int *flag_n)
 {
 	char	*n_s;
 
+	if (!tmp || (tmp->value && tmp->type == 14 && !tmp->value[0]))
+		return ;
 	n_s = tmp->value;
-	if (tmp->type == 9 || tmp->type == 10)
+	if (tmp->type == 9 || tmp->type == 10 || tmp->type == 8)
 		return ;
 	while (tmp && tmp->type != 7)
 	{
@@ -56,31 +59,41 @@ static void	inutils_num(t_token *tmp, int *flag_n)
 	}
 }
 
-int	echo_cmd(t_token **tkn)
+static	void	skip_prob(t_token **node)
+{
+	if ((*node)->type != 7 && strncmp((*node)->value, "echo", 4) == 0)
+		(*node) = (*node)->next;
+	while ((*node) && (*node)->type != 7
+		&& ((*node)->type == 11 || (*node)->type == 12))
+		(*node) = (*node)->next;
+	if ((*node)->type <= 6 && (*node)->type >= 3)
+	{
+		while ((*node) && (*node)->type != 13)
+			(*node) = (*node)->next;
+		if ((*node) && (*node)->type != 7)
+			(*node) = (*node)->next;
+		while ((*node) && (*node)->type != 7 && (*node)->type == 11)
+			(*node) = (*node)->next;
+	}
+}
+
+int	echo_cmd(t_token **tkn, t_data **data)
 {
 	t_token	*node;
 	int		flag_n;
+	int		flag_2;
 
 	node = (*tkn)->next;
 	flag_n = 0;
-	while (node->type != 7 && (node->type == 11 || node->type == 12))
-		node = node->next;
+	flag_2 = 0;
+	skip_prob(&node);
 	inutils_num(node, &flag_n);
-	node = (*tkn)->next;
-	while (node && node->type != 7 && node->type != 3
-			&& node->type != 4 && node->type != 6 && node->type != 2)
+	while (node && node->type != 7 && node->type != 6 && node->type != 2)
 	{
-		if (((int)node->type == 8 || (int)node->type == 13
-				|| (int)node->type == 14 || (int)node->type == 12)
-			&& (int)node->next->type == 11)
-			ft_printf("%s ", node->value);
-		if (((int)node->type == 8 || (int)node->type == 13
-				|| (int)node->type == 14 || (int)node->type == 12)
-			&& (int)node->next->type != 11)
-			ft_printf("%s", node->value);
+		print_echo(&node, &flag_2);
 		node = node->next;
 	}
 	if (flag_n == 0)
-		ft_printf("\n");
-	return (g_err_state = 0, errno = 0, 1);
+		write(1, "\n", 2);
+	return ((*data)->local_err_state = 0, 1);
 }
